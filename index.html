@@ -367,3 +367,134 @@
 
   function confirmarEnvio() {
     const btn = document.getElementById('btnConfirmar');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+    btn.disabled = true;
+
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(dadosFormularioAtual),
+      redirect: "follow",
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      }
+    })
+    .then(response => {
+      modalRevisao.hide();
+      document.getElementById('modalRevisao').addEventListener('hidden.bs.modal', function onModalHidden() {
+        gerarTelaRelatorio();
+        document.getElementById('modalRevisao').removeEventListener('hidden.bs.modal', onModalHidden);
+      });
+    })
+    .catch(erro => {
+      console.error(erro);
+      modalRevisao.hide();
+      setTimeout(gerarTelaRelatorio, 600); 
+    });
+  }
+
+  function gerarTelaRelatorio() {
+    const areaImpressao = document.getElementById('areaImpressao');
+    const form = document.getElementById('checklistForm');
+    const header = document.getElementById('headerForm');
+    
+    let htmlImpressao = `
+      <div style="text-align: center; margin-bottom: 15px;">
+        <img src="logo.png" alt="Logo da Empresa" style="max-height: 80px; width: auto;" onerror="this.style.display='none'">
+      </div>
+      <h3 style="text-align: center; color: #0d6efd; margin-bottom: 20px;">RELATÓRIO DE INSPEÇÃO DIÁRIA</h3>
+      <div style="font-size: 16px;">
+        ${document.getElementById('conteudoRevisao').innerHTML}
+      </div>
+      <hr>
+      <h6 style="margin-top: 20px; font-weight: bold;">Registros Fotográficos (Não Conforme):</h6>
+      <div id="fotosImpressao" style="margin-top: 15px;"></div>
+      
+      <div class="d-grid gap-3 mt-5 d-print-none border-top pt-4">
+        <button class="btn btn-success btn-lg rounded-pill shadow-sm" onclick="abrirWhatsApp()"><i class="bi bi-whatsapp me-2"></i>Enviar Relatório</button>
+        <button class="btn btn-outline-secondary btn-lg rounded-pill" onclick="voltarParaNovoPreenchimento()"><i class="bi bi-arrow-clockwise me-2"></i>Fazer Nova Inspeção</button>
+      </div>
+    `;
+    
+    areaImpressao.innerHTML = htmlImpressao;
+    const containerFotos = document.getElementById('fotosImpressao');
+    const inputsFoto = document.querySelectorAll('.foto-input');
+    let qtdeFotos = 0;
+
+    inputsFoto.forEach((input, index) => {
+      if (input.files && input.files[0]) {
+        qtdeFotos++;
+        const nomeItem = document.querySelectorAll('.item-inspecao')[index].querySelector('p').innerText;
+        const obsItem = document.getElementById(`obs_${index}`).value.trim();
+        
+        let divFoto = document.createElement('div');
+        divFoto.style.marginBottom = '20px';
+        
+        let infoFoto = `<p style="font-weight: bold; margin-bottom: 2px; color: #dc3545;">Item: ${nomeItem}</p>`;
+        if(obsItem !== "") {
+          infoFoto += `<p style="font-size: 14px; margin-bottom: 5px; color: #555;">Obs: ${obsItem}</p>`;
+        }
+        divFoto.innerHTML = infoFoto;
+        
+        let imgDOM = document.createElement('img');
+        imgDOM.src = URL.createObjectURL(input.files[0]);
+        imgDOM.style.maxWidth = '100%';
+        imgDOM.style.maxHeight = '350px';
+        imgDOM.style.borderRadius = '8px';
+        imgDOM.style.border = '1px solid #ccc';
+        
+        divFoto.appendChild(imgDOM);
+        containerFotos.appendChild(divFoto);
+      }
+    });
+
+    if(qtdeFotos === 0) {
+      containerFotos.innerHTML = "<p class='text-muted fst-italic'>Nenhuma foto anexada neste relatório.</p>";
+    }
+
+    form.style.display = 'none';
+    header.style.display = 'none';
+    areaImpressao.style.display = 'block';
+
+    setTimeout(() => {
+      window.print(); 
+    }, 1000); 
+  }
+
+  function abrirWhatsApp() {
+    const mensagem = `Olá! Segue o checklist diário preenchido.\n*Veículo:* ${dadosFormularioAtual.veiculo}\n*Placa:* ${dadosFormularioAtual.placa}\n*Motorista:* ${dadosFormularioAtual.motorista}\n*Última Rev:* ${dadosFormularioAtual.dataRevFormatada}`;
+    const zapUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
+    window.open(zapUrl, '_blank');
+  }
+
+  function voltarParaNovoPreenchimento() {
+    document.getElementById('areaImpressao').style.display = 'none';
+    document.getElementById('areaImpressao').innerHTML = '';
+    
+    document.getElementById('checklistForm').style.display = 'block';
+    document.getElementById('headerForm').style.display = 'flex'; 
+    
+    document.getElementById('checklistForm').reset();
+    document.getElementById('dataHora').value = new Date().toLocaleString('pt-BR');
+    
+    const btn = document.getElementById('btnConfirmar');
+    btn.innerHTML = '<i class="bi bi-cloud-arrow-up me-2"></i>Confirmar';
+    btn.disabled = false;
+  }
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(registration => {
+          console.log('ServiceWorker registrado com sucesso!', registration.scope);
+        })
+        .catch(error => {
+          console.log('Falha ao registrar o ServiceWorker:', error);
+        });
+    });
+  }
+</script>
+
+</body>
+</html>
