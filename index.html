@@ -303,7 +303,7 @@
       km: `${km_puro} (Revisão: ${dataRevFormatada})`, 
       km_puro: km_puro,
       dataRevFormatada: dataRevFormatada,
-      respostas: []
+      respostas: [] // Só receberá os itens N (Não Conforme)
     };
 
     let htmlRevisao = `
@@ -328,13 +328,17 @@
         let statusPlanilha = statusCheck.value;
         if(obs !== "") statusPlanilha += ` (Obs: ${obs})`;
 
-        dadosFormularioAtual.respostas.push({ 
-          item: nomeItem, 
-          status: statusPlanilha, 
-          status_puro: statusCheck.value,
-          obs_pura: obs 
-        });
+        // Aqui está o filtro: Só envia para a planilha (Google Sheets) se for "Não Conforme"
+        if (statusCheck.value === 'Não Conforme') {
+          dadosFormularioAtual.respostas.push({ 
+            item: nomeItem, 
+            status: statusPlanilha, 
+            status_puro: statusCheck.value,
+            obs_pura: obs 
+          });
+        }
         
+        // A interface do PDF/Celular continua mostrando TUDO
         let badgeClass = '';
         if (statusCheck.value === 'Conforme') badgeClass = 'bg-success';
         else if (statusCheck.value === 'Não Conforme') badgeClass = 'bg-danger';
